@@ -48,7 +48,7 @@ EOF
 
 # Escapa el separador si contiene caracteres especiales de regex
 escape_regex() {
-  echo "$1" | sed -E 's/[][\/.^$*+?|(){}]/\\&/g'
+  echo "$1" | sed -E 's/[][\/.^$*+?(){}]/\\&/g'
 }
 
 #Procesa opciones
