@@ -57,11 +57,9 @@ limpiar() {
 detener_demonio() {
 	local pidfile="$1"
 
-    echo "Verificando si el archivo PID existe: $pidfile"
     if [[ -f "$pidfile" ]]; then
         echo "Archivo PID encontrado."
         local demonio_pid=$(cat "$pidfile")
-        echo "PID leído desde el archivo: $demonio_pid"
         
         if ps -p "$demonio_pid" > /dev/null 2>&1; then
             echo "Enviando señal de terminación al demonio (PID $demonio_pid)..."
