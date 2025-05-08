@@ -57,33 +57,39 @@ limpiar() {
 detener_demonio() {
 	local pidfile="$1"
 
+    echo "Verificando si el archivo PID existe: $pidfile"
     if [[ -f "$pidfile" ]]; then
-        local demonio_pid=$(head -n 1 "$pidfile")
+        echo "Archivo PID encontrado."
+        local demonio_pid=$(cat "$pidfile")
+        echo "PID leído desde el archivo: $demonio_pid"
         
-        if ps -p "$demonio_pid" > /dev/null; then
+        if ps -p "$demonio_pid" > /dev/null 2>&1; then
             echo "Enviando señal de terminación al demonio (PID $demonio_pid)..."
             
-            # Enviar señal al grupo completo de procesos
-            kill -SIGTERM -- -$(ps -o pgid= $demonio_pid | grep -o '[0-9]*') 2>/dev/null
-            
-            # Esperar confirmación
+            # Obtener el PGID del demonio principal y matar al grupo entero
+            local pgid
+            pgid=$(ps -o pgid= "$demonio_pid" | grep -o '[0-9]*')
+            kill -SIGTERM -- -"$pgid" 2>/dev/null
+
+            # Esperar un momento
             sleep 0.5
-            if ps -p "$demonio_pid" > /dev/null; then
-                echo "Fallo al terminar, intentando kill -9..."
+
+            if ps -p "$demonio_pid" > /dev/null 2>&1; then
+                echo "Fallo al terminar con SIGTERM, intentando SIGKILL..."
                 kill -9 "$demonio_pid"
             fi
-            
-            echo "Demonio y procesos asociados detenidos."
+
+            echo "Demonio detenido correctamente."
             rm -f "$pidfile"
-            exit 0
+            return 0
         else
             echo "Proceso principal ya terminado. Limpiando archivo PID."
             rm -f "$pidfile"
-            exit 1
+            return 1
         fi
     else
         echo "Error: No hay demonio ejecutándose para este directorio."
-        exit 1
+        return 1
     fi
 }
 
@@ -154,23 +160,25 @@ demonio() {
     done
 
     # Monitorear el directorio en tiempo real con inotify
-	inotifywait -m -e create --format "%w%f" "$directorio_monitoreo" |
-	while read archivo; do
-		if [[ -f "$archivo" ]]; then
-			mover_archivo "$archivo"
-			contador_ordenamientos=$((contador_ordenamientos + 1))
-			if [[ "$contador_ordenamientos" -ge "$cantidad_ordenamientos_para_backup" ]]; then
-				crear_backup
-				contador_ordenamientos=0
-			fi
-		fi
-	done &
-	
-	INOTIFY_PID=$!
-    echo $$ > "$pidfile"  # almaceno solo el PID del demonio principal
-    # Restaurar manejo de señales y esperar
- 
-    wait  # ###############################no logro terminar los procesos
+	(
+        inotifywait -m -e create --format "%w%f" "$directorio_monitoreo" |
+        while read -r archivo; do
+            if [[ -f "$archivo" ]]; then
+                mover_archivo "$archivo"
+                ((contador_ordenamientos++))
+                if ((contador_ordenamientos >= cantidad_ordenamientos_para_backup)); then
+                    crear_backup
+                    contador_ordenamientos=0
+                fi
+            fi
+        done
+    ) &
+
+    # Guardar el PID de inotifywait para control externo
+    INOTIFY_PID=$!
+
+    # Esperar procesos hijos para mantener el daemon vivo
+    wait
 }
 
 
@@ -272,6 +280,7 @@ if [[ "$flag_kill" -eq 1 && -n "$directorio_backup" ]]; then
     exit 1
 elif [[ "$flag_kill" -eq 1 ]]; then
 	 detener_demonio "$pidfile"
+     exit $?  # Salir del script con el mismo código de retorno que la función
 fi
 
 
