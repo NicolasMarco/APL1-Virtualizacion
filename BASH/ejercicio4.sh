@@ -192,6 +192,12 @@ then
     exit 1
 fi
 
+# Verificación de la dependencia zip
+if ! command -v zip &> /dev/null
+then
+    echo "zip no está instalado. Por favor, instala zip para continuar."
+    exit 1
+fi
 
 #Procesa opciones
 opciones=`getopt -o d:s:kc:h --long directorio:,salida:,kill,cantidad:,help -- "$@"`
