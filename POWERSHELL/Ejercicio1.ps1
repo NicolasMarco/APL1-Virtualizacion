@@ -1,3 +1,44 @@
+#------------------------------------------------------------
+# APL1. Ejercicio1
+# Materia: Virtualizacion de hardware
+# Ingeniería en Informática
+# Universidad Nacional de La Matanza (UNLaM)
+# Año: 2025
+#
+# Integrantes del grupo:
+# - De Luca, Leonel Maximiliano DNI: 42.588.356
+# - La Giglia, Rodrigo Ariel DNI: 33334248
+# - Marco, Nicolás Agustín DNI: 40885841
+# - Marrone, Micaela Abril DNI: 45683584
+#-------------------------------------------------------------
+
+<#
+.SYNOPSIS
+Procesa archivos CSV de temperaturas, agrupando por fecha y ubicación, y muestra estadísticas.
+
+.DESCRIPTION
+Este script toma archivos CSV de un directorio, convierte los valores de temperatura y calcula estadísticas 
+mínimas, máximas y promedio por fecha y ubicación. Se puede mostrar en pantalla o exportar a un archivo JSON.
+
+.PARAMETER directorio
+Ruta del directorio donde se buscarán los archivos CSV.
+
+.PARAMETER archivo
+Ruta del archivo JSON donde se guardarán los resultados. No se puede usar con -pantalla al mismo tiempo.
+
+.PARAMETER pantalla
+Muestra el resultado en la consola. No se puede usar con -archivo al mismo tiempo.
+
+.PARAMETER help
+Muestra esta ayuda y termina la ejecución.
+
+.EXAMPLE
+.\Ejercicio1.ps1 -directorio "./Datos" -pantalla
+
+.EXAMPLE
+.\Ejercicio1.ps1 -directorio "./Datos" -archivo "salida.json"
+#>
+
 param (
     [Parameter(HelpMessage="Ruta del directorio donde se buscarán los CSV.")]
     [string][Alias("d")]$directorio,
@@ -21,7 +62,6 @@ if ($help) {
     exit
 }
 
-# Ahora validacion manual ingreso directorio.
 if (-not $directorio) {
     Write-Host "Error: El parámetro -directorio es obligatorio." -ForegroundColor Red
     exit

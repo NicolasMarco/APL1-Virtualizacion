@@ -1,4 +1,17 @@
 #!/bin/bash
+#------------------------------------------------------------
+# APL1. Ejercicio4
+# Materia: Virtualizacion de hardware
+# Ingeniería en Informática
+# Universidad Nacional de La Matanza (UNLaM)
+# Año: 2025
+#
+# Integrantes del grupo:
+# - De Luca, Leonel Maximiliano DNI: 42.588.356
+# - La Giglia, Rodrigo Ariel DNI: 33334248
+# - Marco, Nicolás Agustín DNI: 40885841
+# - Marrone, Micaela Abril DNI: 45683584
+#-------------------------------------------------------------
 
 # Funciones 
 
@@ -12,8 +25,8 @@ según su extensión. También realiza backups periódicos después de un númer
 
 Opciones:
   -d, --directorio <ruta>      Directorio de descargas a monitorear. (Obligatorio)
-  --salida <ruta>              Directorio donde se guardarán los backups. (Obligatorio)
-  -c, --cantidad <entero>      Cantidad de archivos procesados antes de generar un backup. (Opcional, por defecto 10)
+  -s, --salida <ruta>              Directorio donde se guardarán los backups. (Obligatorio)
+  -c, --cantidad <entero>      Cantidad de archivos procesados antes de generar un backup.
   -k, --kill                   Detiene el demonio en ejecución para el directorio especificado.
   -h, --help                   Muestra esta ayuda y termina la ejecución del script.
 
@@ -214,6 +227,7 @@ directorio_monitoreo=""
 directorio_backup=""
 flag_kill=0
 cantidad_ordenamientos_para_backup=0
+errores=0
 
 # Parseo de parámetros
 #Lee parametros
@@ -313,9 +327,6 @@ if [[ -f "$pidfile" ]]; then
         rm -f "$pidfile"
     fi
 fi
-
-
-
 
 # Ejecutar el demonio en segundo plano
 echo "Iniciando demonio para monitorear '$directorio_monitoreo'..."

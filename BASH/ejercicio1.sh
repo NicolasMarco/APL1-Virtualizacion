@@ -1,6 +1,20 @@
 #!/bin/bash
+#------------------------------------------------------------
+# APL1. Ejercicio1
+# Materia: Virtualizacion de hardware
+# Ingeniería en Informática
+# Universidad Nacional de La Matanza (UNLaM)
+# Año: 2025
+#
+# Integrantes del grupo:
+# - De Luca, Leonel Maximiliano DNI: 42.588.356
+# - La Giglia, Rodrigo Ariel DNI: 33334248
+# - Marco, Nicolás Agustín DNI: 40885841
+# - Marrone, Micaela Abril DNI: 45683584
+#-------------------------------------------------------------
 
-#Funcion para mostrar ayuda
+
+# Muestra la ayuda del script
 mostrarAyuda() {
   cat <<EOF
 Ayuda del script: $0 [OPCIONES]
@@ -20,7 +34,7 @@ Ejemplos:
 EOF
 }
 
-#Funcion para validar fechas
+# Valida fechas en varios formatos
 validar_fecha() {
 	local fecha="$1"
 	local fecha_normalizada=""
@@ -43,7 +57,7 @@ validar_fecha() {
     date -d "$fecha_normalizada" "+%Y-%m-%d" >/dev/null 2>&1
 }
 
-#Procesa opciones
+# Procesamiento de opciones
 opciones=`getopt -o d:a:ph --long directorio:,archivo:,pantalla,help -- "$@"`
 
 if [ "$?" -ne 0 ]; then
@@ -53,13 +67,13 @@ fi
 
 eval set -- "$opciones"
 
-#Variables para los parametros y errores
+# Inicialización de variables
 directorio=""
 archivoOut=""
 pantalla=false
 errores=false
 
-#Lee parametros
+# Lectura de argumentos
 while true; do
 	case "$1" in
 		-d | --directorio) 
@@ -111,13 +125,11 @@ if [[ "$errores" == true ]]; then
     exit 1
 fi
 
-## Validar archivos .csv en el directorio
+# Validación de archivos .csv
 
 #Shopt: los patrones que no coincidan con ningún archivo se expanden a una cadena vacía.
 shopt -s nullglob
-
 csv_files=("$directorio"/*.csv)
-
 cantidad_archivos=0
 archivos_validos=()
 
@@ -135,18 +147,19 @@ if [[ ${#csv_files[@]} -eq 0 || "$cantidad_archivos" -eq 0 ]]; then
     exit 1
 fi
 
-#Crea archivo temporal
-archivo_temporal=$(mktemp)
-
-#Trap ejecuta limpiar_temporales cuando el script termine
+#Crea archivo temporal y asegurar su limpieza al salir
+archivo_temporal=$(mktemp) || { 
+								echo "Error: No se pudo crear un archivo temporal." >&2; 
+								exit 1; 
+								}
+								
 trap "rm -f $archivo_temporal" EXIT
 
-# Usamos awk para procesar todos los archivos validos
+# Procesamiento con awk
 awk -F',' '
     function validar_fecha(f) {
         return f ~ /^[0-9]{4}[-/][0-9]{2}[-/][0-9]{2}$/ || f ~ /^[0-9]{2}[-/][0-9]{2}[-/][0-9]{4}$/
     }
-
     function normalizar_fecha(f) {
            gsub(/[\/\-]/, "-", f);
         split(f, a, "-");
@@ -167,40 +180,39 @@ awk -F',' '
     }
     
     {
-     
-     fecha=$2;
-     hora=$3;
-     ubicacion=$4;
-     temp=$5;
-     gsub(/\r/, "", fecha)
-     gsub(/\r/, "", hora)
-     gsub(/\r/, "", ubicacion)
-     gsub(/\r/, "", temp)
-     
-     # Validar fecha
-	if (!validar_fecha(fecha)){
-            next
+		fecha=$2;
+		hora=$3;
+		ubicacion=$4;
+		temp=$5;
+		gsub(/\r/, "", fecha)
+		gsub(/\r/, "", hora)
+		gsub(/\r/, "", ubicacion)
+		gsub(/\r/, "", temp)
+		 
+		# Validar fecha
+		if (!validar_fecha(fecha)){
+				next
+		}
+		
+		fecha=normalizar_fecha(fecha)
+		
+		# Validar hora, temperatura y ubicación
+		if (!validar_hora(hora) || !validar_temperatura(temp) || !validar_ubicacion(ubicacion)) {
+			next
+		}
+
+		key = fecha SUBSEP ubicacion
+
+		suma[key] += temp
+		conteo[key]++
+
+		if ((key in min) == 0 || temp < min[key])
+			min[key] = temp
+		if ((key in max) == 0 || temp > max[key])
+			max[key] = temp
+
+		fechas[fecha] = 1
 	}
-	
-	fecha=normalizar_fecha(fecha)
-    
-	# Validar hora, temperatura y ubicación
-	if (!validar_hora(hora) || !validar_temperatura(temp) || !validar_ubicacion(ubicacion)) {
-		next
-	}
-
-    key = fecha SUBSEP ubicacion
-
-    suma[key] += temp
-    conteo[key]++
-
-    if ((key in min) == 0 || temp < min[key])
-        min[key] = temp
-    if ((key in max) == 0 || temp > max[key])
-        max[key] = temp
-
-    fechas[fecha] = 1
-}
 END {
     print "{"
     primer_fecha = 1
@@ -233,11 +245,19 @@ END {
 }
 ' "${archivos_validos[@]}" >> "$archivo_temporal"
 
-# Mostrar el resultado dependiendo de si se requiere salida por pantalla o archivo
+if [[ $? -ne 0 ]]; then
+  echo "Ocurrió un error al procesar los archivos CSV." >&2
+  exit 1
+fi
+
+# Mostrar resultado según opción
 if [ "$pantalla" = true ]; then
     cat "$archivo_temporal"
 else
-    mv "$archivo_temporal" $archivoOut".json"
+    mv "$archivo_temporal" "$archivoOut.json" || {
+												echo "No se pudo guardar el archivo de salida '$archivoOut.json'." >&2
+												exit 1
+												}
     echo "Procesamiento completado. Resultados guardados en $archivoOut.json."
 fi
 

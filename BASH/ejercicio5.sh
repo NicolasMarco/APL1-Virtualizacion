@@ -1,4 +1,17 @@
-#! /usr/bin/bash
+#!/bin/bash
+#------------------------------------------------------------
+# APL1. Ejercicio5
+# Materia: Virtualizacion de hardware
+# Ingeniería en Informática
+# Universidad Nacional de La Matanza (UNLaM)
+# Año: 2025
+#
+# Integrantes del grupo:
+# - De Luca, Leonel Maximiliano DNI: 42.588.356
+# - La Giglia, Rodrigo Ariel DNI: 33334248
+# - Marco, Nicolás Agustín DNI: 40885841
+# - Marrone, Micaela Abril DNI: 45683584
+#-------------------------------------------------------------
 
 # Verificación de que curl y jq están instalados
 verificar_dependencias() {
@@ -85,12 +98,15 @@ consultar_fruta() {
     fi
 
     # Si no está en caché, consultar la API (capturando código HTTP al final)
-    response=$(curl -s -w "%{http_code}" "$url")
+     response=$(curl -s --fail --connect-timeout 10 -w "%{http_code}" "$url") || {
+        echo "Error: No se pudo conectar al servidor para '$clave'." >&2
+        return 1
+    }
     body="${response::-3}"           # Cuerpo de la respuesta sin el código HTTP
     code="${response: -3}"           # Últimos 3 caracteres = código HTTP
 
     # Guardar respuesta válida y devolverla
-    if [[ "$code" == "200" ]]; then
+    if [[ "$code" == "200" && -n "$body" ]]; then
         echo "$body" > "$cache_file"
         echo "$body"
     elif [[ "$code" == "404" ]]; then
@@ -204,7 +220,10 @@ fi
 if [[ -n "$name" ]]; then
     IFS=',' read -ra nombres <<< "$name"
     for nombre in "${nombres[@]}"; do
-        # Validación: solo letras, incluyendo tildes y ñ
+		#elimina espacios 
+        nombre=$(echo "$nombre" | xargs)
+
+		# Validación: solo letras, incluyendo tildes y ñ
         if ! [[ "$nombre" =~ ^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ]{2,}$ ]]; then
             echo "La palabra $nombre no es válida."
         else

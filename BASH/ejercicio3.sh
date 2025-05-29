@@ -1,4 +1,17 @@
-#! /usr/bin/bash
+#!/bin/bash
+#------------------------------------------------------------
+# APL1. Ejercicio3
+# Materia: Virtualizacion de hardware
+# Ingeniería en Informática
+# Universidad Nacional de La Matanza (UNLaM)
+# Año: 2025
+#
+# Integrantes del grupo:
+# - De Luca, Leonel Maximiliano DNI: 42.588.356
+# - La Giglia, Rodrigo Ariel DNI: 33334248
+# - Marco, Nicolás Agustín DNI: 40885841
+# - Marrone, Micaela Abril DNI: 45683584
+#-------------------------------------------------------------
 
 #Funcion para mostrar ayuda
 mostrarAyuda() {
@@ -98,12 +111,13 @@ if [[ "$errores" == true ]]; then
 fi
 
 
+
 #Array
 lista_archivos=()
 
 #Almaceno las rutas de los archivos en el array lista_archivos
-for ext in $archivos; do
-	find "$directorio" -type f -iname "*.${ext}"
+IFS=',' read -ra extensiones <<< "$archivos"
+for ext in "${extensiones[@]}"; do
 	# Valido extensiones
     if [[ "$ext" =~ ^[a-zA-Z0-9]{1,5}$ ]]; then
 		#Leo la salida de find línea por línea y la añade al final del array lista_archivos
@@ -118,10 +132,11 @@ if [[ -z "$lista_archivos" ]]; then
 	exit 1
 fi
 
+# Procesamiento con AWK: cuenta ocurrencias exactas de cada palabra
 awk -v palabras="$palabras" '
 BEGIN {
 	#Guardo las palabras con índices numéricos en "claves"
-	split(palabras, claves, " ")
+	split(palabras, claves, ",")
 	for (i in claves) {
 		lista_palabras[claves[i]] = 0
 	}
@@ -137,7 +152,7 @@ BEGIN {
 	}
 }
 END {
-	  print "Resultado del conteo:"
+	print "Resultado del conteo:"
 
 	# Ordenar claves[] por valor en lista_palabras[], descendente
 	for (i = 1; i <= total_palabras; i++) {
@@ -157,3 +172,7 @@ END {
 	}
 }' "${lista_archivos[@]}"
 
+if [[ $? -ne 0 ]]; then
+  echo "Ocurrió un error al procesar los archivos." >&2
+  exit 1
+fi

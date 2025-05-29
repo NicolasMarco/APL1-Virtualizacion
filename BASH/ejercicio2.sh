@@ -1,4 +1,17 @@
-#! /usr/bin/bash
+#!/bin/bash
+#------------------------------------------------------------
+# APL1. Ejercicio2
+# Materia: Virtualizacion de hardware
+# Ingeniería en Informática
+# Universidad Nacional de La Matanza (UNLaM)
+# Año: 2025
+#
+# Integrantes del grupo:
+# - De Luca, Leonel Maximiliano DNI: 42.588.356
+# - La Giglia, Rodrigo Ariel DNI: 33334248
+# - Marco, Nicolás Agustín DNI: 40885841
+# - Marrone, Micaela Abril DNI: 45683584
+#-------------------------------------------------------------
 
 #Funcion para mostrar ayuda
 mostrarAyuda() {
@@ -44,8 +57,6 @@ Ejemplos:
 EOF
 }
 
-#Funciones
-
 # Escapa el separador si contiene caracteres especiales de regex
 escape_regex() {
   echo "$1" | sed -E 's/[][\/.^$*+?(){}]/\\&/g'
@@ -61,8 +72,8 @@ fi
 
 eval set -- "$opciones"
 
-#Variables para los parametros y errores
-matriz=""
+#Inicializacion de variables
+archivo_matriz=""
 producto=""
 trasponer=false
 separador=""
@@ -72,14 +83,14 @@ errores=false
 while true; do
 	case "$1" in
 		-m | --matriz)
-			if [[ -z "$2" || "$2" == -* || ! -f "$2" || ! "$(file --mime-type -b "$2")" =~ ^text/ ]]; then
+			if [[ -z "$2" || "$2" == -* || ! -f "$2" ]]; then
         			errores=true
 			else
-				matriz="$2"				
+				archivo_matriz="$2"				
 				
 				# Conversión segura a formato Unix (CRLF -> LF)
 				matriz_tmp="$(mktemp)"
-				tr -d '\r' < "$matriz" > "$matriz_tmp" && mv "$matriz_tmp" "$matriz"
+				tr -d '\r' < "$archivo_matriz" > "$matriz_tmp" && mv "$matriz_tmp" "$archivo_matriz"
 				shift
 			fi
 			shift 
@@ -129,11 +140,10 @@ done
 #Trap eliminacion de archivo_temporal cuando el script finalice
 trap "rm -f $matriz_tmp" EXIT
 
-#Validaciones adicionales
 
-# Si no hay errores previos, verificamos que los parámetros obligatorios estén presentes y sean coherentes
+# Validacion de parámetros obligatorios
 if [[ "$errores" == false  && ( 
-      -z "$matriz" ||                     # Faltó el archivo de matriz
+      -z "$archivo_matriz" ||                     # Faltó el archivo de matriz
       ( -z "$producto" && "$trasponer" == false ) ||  # No se indicó ni producto escalar ni trasposición
       -z "$separador"                    # Faltó el separador
     ) ]]; then
@@ -145,14 +155,20 @@ if [ "$errores" == true ];then
 	exit 1
 fi
 
+#Validacion de archivo de entrada
+if [[ ! "$(file --mime-type -b "$archivo_matriz")" =~ ^text/ ]]; then
+	echo "El archivo proporcionado no es valido."
+	exit 1
+fi
 
 
-nombre_archivo=$(basename "$matriz")
-directorio_archivo=$(dirname "$matriz")
+nombre_archivo=$(basename "$archivo_matriz")
+directorio_archivo=$(dirname "$archivo_matriz")
 archivo_salida="${directorio_archivo}/salida.${nombre_archivo}"
 separador_escapado=$(escape_regex "$separador")
 
-# Leer el archivo y lo procesa con awk
+#Procesamiento de la matriz con awk: validación, producto escalar o trasposición
+
 awk_result=$(awk -v separador="$separador_escapado" -v producto="$producto" -v trasponer="$trasponer" '
 BEGIN {
 	FS = separador
@@ -198,7 +214,8 @@ END {
 	}
 	else	
 		if (trasponer == "true") {
-			#trasponer
+			
+			# Trasposición			
 			for (i = 1; i <= campos; i++) {
 				for (j = 1; j <= NR; j++) {
 					printf "%s", matriz[j,i]
@@ -209,6 +226,7 @@ END {
 			}
 		} 
 		else if (producto != "") {
+		
 			#Producto escalar
 			for (i = 1; i <= NR; i++) {
 				for (j = 1; j <= campos; j++) {
@@ -223,7 +241,7 @@ END {
 				print "Error: No se indicó ni producto ni trasposición."
 				exit 1
 			}
-}' "$matriz" 2>&1) 
+}' "$archivo_matriz" 2>&1) 
 
 # Verificar si hubo errores en AWK
 if [[ "$awk_result" =~ ^Error ]]; then
@@ -235,5 +253,4 @@ fi
 echo "$awk_result" > "$archivo_salida"
 
 echo "La operación se completó exitosamente. El resultado se guardó en: $archivo_salida"
-cat "$archivo_salida"
 	

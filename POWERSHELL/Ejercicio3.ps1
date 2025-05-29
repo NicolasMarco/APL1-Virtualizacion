@@ -1,5 +1,59 @@
+#------------------------------------------------------------
+# APL1. Ejercicio3
+# Materia: Virtualizacion de hardware
+# Ingeniería en Informática
+# Universidad Nacional de La Matanza (UNLaM)
+# Año: 2025
+#
+# Integrantes del grupo:
+# - De Luca, Leonel Maximiliano DNI: 42.588.356
+# - La Giglia, Rodrigo Ariel DNI: 33334248
+# - Marco, Nicolás Agustín DNI: 40885841
+# - Marrone, Micaela Abril DNI: 45683584
+#-------------------------------------------------------------
+
+<#
+.SYNOPSIS
+Cuenta la cantidad de veces que aparecen determinadas palabras dentro de archivos de un directorio con extensiones específicas.
+
+.DESCRIPTION
+Este script permite recorrer recursivamente un directorio, buscar archivos con extensiones específicas (por ejemplo `.txt`, `.pdf`, `.docx`) y contar cuántas veces aparecen determinadas palabras en ellos. 
+También muestra mensajes de estado sobre los archivos encontrados y procesados.
+
+.PARAMETER directorio
+Ruta del directorio donde se buscarán los archivos a analizar. Este parámetro es obligatorio.
+
+.PARAMETER archivo
+Lista de extensiones de archivo (sin el punto inicial) a buscar dentro del directorio. Este parámetro es obligatorio.
+
+.PARAMETER palabras
+Lista de palabras a contar dentro de los archivos encontrados. Este parámetro es obligatorio.
+
+.PARAMETER help
+Muestra la ayuda del script con información sobre su uso.
+
+.EXAMPLE
+.\Ejercicio.ps1 -directorio "C:\Documentos" -archivo "txt","pdf" -palabras "PowerShell","automatización"
+Busca archivos con extensión .txt y .pdf dentro de "C:\Documentos" y cuenta cuántas veces aparecen las palabras "PowerShell" y "automatización".
+
+.EXAMPLE
+.\Ejercicio.ps1 -h
+Muestra la ayuda del script.
+
+.NOTES
+- Para que el script pueda procesar archivos `.pdf`, es necesario tener instalado `pdftotext.exe` y que esté disponible en el PATH del sistema.
+- Para archivos `.docx`, el script utiliza la aplicación de Word (COMObject), por lo tanto requiere que Microsoft Word esté instalado.
+#>
+
 param (
     [Parameter(HelpMessage="Ruta del directorio a analizar. ")]
+    [ValidateScript({
+        if (-not (Test-Path -Path $_ -PathType Container)) {
+            Write-Host "El directorio especificado no existe: $_" -ForegroundColor Red
+            exit
+        }
+        $true
+    })]
     [string][Alias("d")]$directorio,
     
     [Parameter(HelpMessage="Lista de extensiones de archivos a buscar.")][ValidateNotNullOrEmpty()]
@@ -58,10 +112,7 @@ if (-not $palabras) {
 }
 
 
-if (-not (Test-Path -Path $directorio -PathType Container)) {
-    Write-Host "El directorio especificado no existe: $directorio" -ForegroundColor Red
-    exit
-}
+
 $listaPalabras = ObtenerPalabras -palabras $palabras
 $listaExtenciones = ObtenerExtenciones -archivo $archivo
 

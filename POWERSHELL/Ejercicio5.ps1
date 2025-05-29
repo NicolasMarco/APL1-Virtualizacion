@@ -1,3 +1,55 @@
+#------------------------------------------------------------
+# APL1. Ejercicio5
+# Materia: Virtualizacion de hardware
+# Ingeniería en Informática
+# Universidad Nacional de La Matanza (UNLaM)
+# Año: 2025
+#
+# Integrantes del grupo:
+# - De Luca, Leonel Maximiliano DNI: 42.588.356
+# - La Giglia, Rodrigo Ariel DNI: 33334248
+# - Marco, Nicolás Agustín DNI: 40885841
+# - Marrone, Micaela Abril DNI: 45683584
+#-------------------------------------------------------------
+
+<#
+.SYNOPSIS
+Busca frutas por ID o nombre utilizando la API pública fruityvice.
+
+.DESCRIPTION
+Este script permite buscar información sobre frutas específicas utilizando su ID o nombre.
+Utiliza una caché local para evitar consultar dos veces por la misma fruta y muestra
+los resultados en un formato plano.
+
+.PARAMETER id
+ID o IDs de las frutas a buscar. Puede pasarse uno o varios.
+
+.PARAMETER name
+Nombre o nombres de las frutas a buscar. Puede pasarse uno o varios.
+
+.PARAMETER help
+Muestra esta ayuda.
+
+.EXAMPLE
+.\Ejercicio5.ps1 -id 2
+
+Busca la fruta con ID 2.
+
+.EXAMPLE
+.\Ejercicio5.ps1 -name banana -name apple
+
+Busca las frutas banana y apple por nombre.
+
+.EXAMPLE
+.\Ejercicio5.ps1 -id 2 -name banana
+
+Realiza búsqueda combinada por ID y nombre.
+
+.NOTES
+Utiliza la API: https://fruityvice.com/api/fruit/
+Crea una caché en el directorio $env:LOCALAPPDATA\frutas o $HOME/frutas.
+#>
+
 param (
     [Parameter(HelpMessage="Id/s de las frutas a buscar")] 
     [array][Alias("i")]$id,
@@ -46,11 +98,9 @@ function ProcesarObject {
         $value = $prop.Value
 
         if ($value -is [System.Management.Automation.PSCustomObject]) {
-            # Procesar objeto anidado sin prefijo
             ProcesarObject -currentObj $value
         }
         elseif ($value -is [System.Collections.IEnumerable] -and $value -isnot [string]) {
-            # Manejar arrays/colecciones
             foreach ($item in $value) {
                 if ($item -is [System.Management.Automation.PSCustomObject]) {
                     ProcesarObject -currentObj $item
@@ -61,7 +111,6 @@ function ProcesarObject {
             }
         }
         else {
-            # Mostrar propiedad directamente
             Write-Host "$($prop.Name): $value"
         }
     }
@@ -78,9 +127,14 @@ function ImprimirPlano {
     ProcesarObject -currentObj $obj
 }
 
-# Crear carpeta y archivo de caché si no existen
-$localAppData = $env:LOCALAPPDATA
-$cacheDir = Join-Path $localAppData "frutas"
+# Determinar carpeta de usuario compatible con Windows y Linux
+$baseCache = if ($IsWindows) { $env:LOCALAPPDATA } else { $env:HOME }
+
+if (-not $baseCache) {
+    $baseCache = "."
+}
+
+$cacheDir = Join-Path $baseCache "frutas"
 if (-not (Test-Path $cacheDir)) {
     New-Item -ItemType Directory -Path $cacheDir -Force | Out-Null
 }
@@ -109,7 +163,6 @@ if ($cache) {
 foreach ($nombre in $name) {
     $encontrado = YaEstaEnCache "name" $nombre
     if ($encontrado) {
-       # Write-Host "El nombre '$nombre' ya estaba en caché:"
         ImprimirPlano -obj $encontrado
     } else {
         $fruta = PedirAAPI -identificador $nombre
@@ -121,7 +174,6 @@ foreach ($nombre in $name) {
 foreach ($ide in $id) {
     $encontrado = YaEstaEnCache "id" $ide
     if ($encontrado) {
-       # Write-Host "El ID '$ide' ya estaba en caché:"
         ImprimirPlano -obj $encontrado
     } else {
         $fruta = PedirAAPI -identificador $ide
@@ -131,4 +183,3 @@ foreach ($ide in $id) {
 
 # Guardar nueva caché (sin duplicados por ID)
 $nuevaCache | Sort-Object id -Unique | ConvertTo-Json -Depth 5 | Set-Content -Path $cacheFile -Force
-

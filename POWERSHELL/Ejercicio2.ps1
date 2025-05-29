@@ -1,30 +1,96 @@
+#------------------------------------------------------------
+# APL1. Ejercicio2
+# Materia: Virtualizacion de hardware
+# Ingeniería en Informática
+# Universidad Nacional de La Matanza (UNLaM)
+# Año: 2025
+#
+# Integrantes del grupo:
+# - De Luca, Leonel Maximiliano DNI: 42.588.356
+# - La Giglia, Rodrigo Ariel DNI: 33334248
+# - Marco, Nicolás Agustín DNI: 40885841
+# - Marrone, Micaela Abril DNI: 45683584
+#-------------------------------------------------------------
+
+<#
+.SYNOPSIS
+    Realiza operaciones sobre una matriz numérica cargada desde un archivo.
+
+.DESCRIPTION
+    Este script permite procesar una matriz numérica desde un archivo de texto plano.
+    Las operaciones disponibles son:
+    - Transponer la matriz.
+    - Multiplicar la matriz por un escalar.
+    
+    El archivo debe estar separado por un delimitador configurable, y puede contener números enteros o decimales (usando ',' o '.').
+    El resultado se guarda como un nuevo archivo en la misma carpeta del archivo original.
+
+.PARAMETER matriz
+    Ruta del archivo que contiene la matriz a procesar.
+
+.PARAMETER separador
+    Caracter que separa los elementos de cada fila de la matriz. No puede ser un número ni los caracteres "-" o ",".
+
+.PARAMETER trasponer
+    Indica si se debe transponer la matriz. No se puede usar junto con -producto.
+
+.PARAMETER producto
+    Número por el cual se multiplicará cada elemento de la matriz. No se puede usar junto con -trasponer.
+
+.PARAMETER help
+    Muestra la ayuda detallada del script.
+
+.EXAMPLE
+    .\Ejercicio2.ps1 -matriz .\matriz.csv -separador ";" -trasponer
+
+    Transpone la matriz ubicada en 'matriz.csv' usando ';' como separador y guarda el resultado en un nuevo archivo.
+
+.EXAMPLE
+    .\Ejercicio2.ps1 -matriz .\matriz.csv -separador "," -producto 3.5
+
+    Multiplica por 3.5 todos los valores de la matriz ubicada en 'matriz.csv' y guarda el resultado.
+#>
 param (
-    [Parameter(HelpMessage="Ruta de la matriz.")]
-    [string][Alias("m")]$matriz,
-    
-    [Parameter(HelpMessage="Separador del archivo.")]
-    [string][Alias("s")]$separador,
-    
+   [Parameter(Mandatory=$true, HelpMessage="Ruta del archivo de la matriz.")]
+[Alias("m")]
+[ValidateScript({
+    if (-not (Test-Path $_ -PathType Leaf)) {
+        throw "El archivo especificado no existe o no es un archivo."
+    }
+    $contenido = Get-Content -Path $_
+    if ($contenido.Count -eq 0) {
+        throw "El archivo está vacío: $_"
+    }
+    return $true
+})]
+[string]$matriz,
+
+    [Parameter(Mandatory=$true, HelpMessage="Separador del archivo.")]
+    [Alias("s")]
+    [ValidateLength(1,1)]
+    [ValidateScript({ 
+        if ($_ -match '[0-9\-]') {
+            throw "El separador no puede ser un número ni un guion."
+        }
+        return $true
+    })]
+    [string]$separador,
+
     [Parameter(HelpMessage="Transponer matriz.")]
-    [switch][Alias("t")]$trasponer,
-    
-    [Parameter(HelpMessage="producto por matriz.")]
-    [double][Alias("p")]$producto,
+    [Alias("t")]
+    [switch]$trasponer,
+
+    [Parameter(HelpMessage="Multiplicar por escalar.")]
+    [Alias("p")]
+    [double]$producto,
 
     [Parameter(HelpMessage="Muestra esta ayuda.")]
-    [switch][Alias("h")]$help
+    [Alias("h")]
+    [switch]$help
 )
 
-function VerificarSeparador {
-    param (
-        [Parameter(Mandatory=$true)]
-        [string]$separador
-    )
-    if($separador -match '[0-9,\-]'){
-        Write-Host "El separador no es válido: $separador" -ForegroundColor Red
-        exit
-    }
-}
+
+
 function ObtenerMatriz {
     param (
         [Parameter(Mandatory=$true)]
@@ -44,9 +110,9 @@ function ObtenerMatriz {
         foreach ($elemento in $elementos) {
             $valor = $elemento.Trim()
 
-            # Reemplazar , por . ANTES de intentar parsearlo
+           
             if ($valor -match '^-?\d+([.,]\d+)?$') {
-                $valor = $valor -replace ',', '.'
+                
                 try {
                     $fila += [double]::Parse($valor, [System.Globalization.CultureInfo]::InvariantCulture)
                 } catch {
@@ -54,6 +120,7 @@ function ObtenerMatriz {
                 }
             } else {
                 Write-Host "Error: Valor no numérico '$valor'" -ForegroundColor Red
+                exit
             }
         }
 
@@ -62,52 +129,9 @@ function ObtenerMatriz {
 
     return $matrizArray
 }
-#
-function VerificarMatriz {
-    param (
-        [Parameter(Mandatory=$true)]
-        [ValidateScript({Test-Path $_ -PathType Leaf})]
-        [string]$rutaArchivo,
-        
-        [Parameter(Mandatory=$true)]
-        [string]$separador
-    )
 
-    # Leer contenido del archivo
-    $contenido = Get-Content -Path $RutaArchivo
-    
-    # Verificar archivo no vacío
-    if ($contenido.Count -eq 0) {
-        Write-Host "Error: El archivo está vacío - $RutaArchivo" -ForegroundColor Red
-        exit 1
-    }
 
-    # Verificar consistencia de columnas y valores numéricos
-    $numeroColumnas = -1
-    foreach ($linea in $contenido) {
-        $elementos = $linea -split [regex]::Escape($Separador)
-        
-        if ($numeroColumnas -eq -1) {
-            $numeroColumnas = $elementos.Count
-            if ($numeroColumnas -eq 0) {
-                Write-Host "Error: No hay columnas detectadas" -ForegroundColor Red
-                exit 1
-            }
-        }
-        elseif ($elementos.Count -ne $numeroColumnas) {
-            Write-Host "Error: Inconsistencia en columnas (línea $($contenido.IndexOf($linea)+1))" -ForegroundColor Red
-            exit 1
-        }
 
-        foreach ($elemento in $elementos) {
-            if (-not ($elemento -match '^-?\d+([.,]\d+)?$')) {
-                Write-Host "Error: Valor no numérico - '$elemento'" -ForegroundColor Red
-                exit 1
-            }
-        }
-    }
-}
-#
 function TrasponerMatriz {
     param (
         [Parameter(Mandatory=$true)]
@@ -207,9 +231,30 @@ if(-not( $trasponer -or $producto)){
     Write-Host "Debe seleccionar trasponer o producto." -ForegroundColor Red
     exit
 }
-VerificarSeparador -separador $separador
+# Validación de la matriz y el separador juntos (antes de procesar)
+$contenido = Get-Content -Path $matriz
 
-VerificarMatriz -rutaArchivo $matriz -separador $separador
+$numeroColumnas = -1
+foreach ($linea in $contenido) {
+    $elementos = $linea -split [regex]::Escape($separador)
+    if ($numeroColumnas -eq -1) {
+        $numeroColumnas = $elementos.Count
+        if ($numeroColumnas -eq 0) {
+            Write-Host "No se detectaron columnas válidas en la primera línea." -ForegroundColor Red
+            exit
+        }
+    } elseif ($elementos.Count -ne $numeroColumnas) {
+        Write-Host "Inconsistencia en el número de columnas en alguna línea." -ForegroundColor Red
+        exit
+    }
+    foreach ($elemento in $elementos) {
+        if (-not ($elemento -match '^-?\d+([.,]\d+)?$')) {
+            Write-Host "Elemento no numérico encontrado: '$elemento'" -ForegroundColor Red
+            exit
+        }
+    }
+}
+
 
 $matrix = ObtenerMatriz -origen $matriz -separador $separador
 
@@ -217,6 +262,15 @@ if ($trasponer) {
     $resultado = TrasponerMatriz -matriz $matrix
 } elseif ($producto) {
     $resultado = ProductoMatriz -matriz $matrix -producto $producto
+}
+if (-not $matriz) {
+    Write-Host "Error: El parametro -matriz es obligatorio." -ForegroundColor Red
+    exit
+}
+
+if (-not $separador) {
+    Write-Host "Error: El parametro -separador es obligatorio." -ForegroundColor Red
+    exit
 }
 
 GuardarMatrizEnArchivo -matriz $resultado -archivoEntrada $matriz -separador $separador
